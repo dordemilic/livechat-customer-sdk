@@ -1,0 +1,83 @@
+/* Reset some default styles */
+body, h1, p, div {
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+/* Apply some basic styling */
+.chat-wrapper {
+  max-width: 400px;
+  margin: 200px auto;
+  padding: 20px;
+  box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+}
+
+.chat-container {
+  max-height: 300px;
+  overflow-y: scroll;
+  padding: 10px;
+}
+
+/* Hide the scrollbar */
+.chat-container::-webkit-scrollbar {
+  width: 0.5em;
+}
+
+.chat-container::-webkit-scrollbar-thumb {
+  background-color: #ccc;
+}
+
+.chat-container::-webkit-scrollbar-track {
+  background: none;
+}
+
+.message {
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  background-color: #f5f5f5;
+}
+
+.message .author {
+  font-weight: bold;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.message .text {
+  font-size: 14px;
+  color: #333;
+  margin-bottom: 5px;
+}
+
+.message .timestamp {
+  font-size: 12px;
+  color: #999;
+}
+
+.message-input {
+  margin-top: 20px;
+  display: flex;
+}
+
+.message-input input[type="text"] {
+  flex-grow: 1;
+  padding: 5px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.message-input button {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 5px 10px;
+  cursor: pointer;
+}
+
+#typing-indicator {
+  padding-left: 10px;
+  font-size: 13px;
+}

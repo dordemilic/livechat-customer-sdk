@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite App</title>
+  </head>
+  <body>
+    <div class="chat-wrapper">
+      <div class="chat-container" id="chat-container">
+        <!-- Chat messages will be displayed here -->
+      </div>
+      <div id="typing-indicator" style="display: none;">Agent is typing...</div>
+      <div class="message-input">
+        <input type="text" id="message-input" placeholder="Type your message..." />
+        <button id="send-btn">Send</button>
+      </div>
+    </div>
+    <div class="agent-input">
+      <input id="agent-message-input" type="text" placeholder="Type your response..." />
+      <button id="send-agent-message-btn">Send</button>
+    </div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
