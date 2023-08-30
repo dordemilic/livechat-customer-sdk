@@ -9,7 +9,7 @@ sendButton.addEventListener("click", () => {
   const messageText = messageInput.value;
   if (messageText) {
     sendCustomerMessage(messageText);
-    messageInput.value = ""; // Clear the input field
+    messageInput.value = ""; 
   }
 });
 
@@ -81,13 +81,11 @@ customerSDK.on("connected", (payload) => {
         .then((agentData) => {
           setAgentData(agentData.agent);
 
-          // Now you have both customer and agent data available
           console.log("Customer:", getCustomerData());
           console.log("Agent:", getAgentData());
 
           getAndDisplayChat("S007C3QD7Y");
 
-          // Handle incoming events (messages)
           customerSDK.on("incoming_event", (payload) => {
             const { event } = payload;
             console.log(event.text)
@@ -128,19 +126,25 @@ function displayChatMessages(messages) {
     const messageElement = document.createElement("div");
     messageElement.className = "message";
 
+    const timestamp = new Date(message.createdAt);
+    const formattedTimestamp = formatTimestamp(timestamp);
+
     if (message.authorId === getCustomerData().id) {
       messageElement.innerHTML = `
         <p class="sender sender-customer">Customer:</p>
         <p class="text">${message.text}</p>
+        <p class="timestamp">${formattedTimestamp}</p>
       `;
     } else if (message.authorId === getAgentData().id) {
       messageElement.innerHTML = `
         <p class="sender sender-agent">${getAgentData().name}</p>
         <p class="text">${message.text}</p>
+        <p class="timestamp">${formattedTimestamp}</p>
       `;
     } else {
       messageElement.innerHTML = `
         <p class="text">${message.text}</p>
+        <p class="timestamp">${formattedTimestamp}</p>
       `;
     }
 
@@ -148,6 +152,12 @@ function displayChatMessages(messages) {
   });
 
   chatContainer.scrollTop = chatContainer.scrollHeight;
+}
+
+function formatTimestamp(date) {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  return `${hours < 10 ? '0' : ''}${hours}:${minutes < 10 ? '0' : ''}${minutes}`;
 }
 
 function sendCustomerMessage(text) {
