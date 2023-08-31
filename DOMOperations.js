@@ -9,22 +9,25 @@ export const createMessage = (id, text, authorType, avatar, createdAt) => {
   const messageDivContainer = document.createElement("div");
   messageDivContainer.dataset.id = id;
   messageDivContainer.classList.add("message-container", authorType);
+
   if (avatar) {
     const avatarImage = document.createElement("img");
     avatarImage.src = avatar;
     avatarImage.classList.add("agent-avatar");
-    messageDivContainer.append(avatarImage);
+    messageDivContainer.appendChild(avatarImage);
   }
-
-  const timestampSpan = document.createElement("span");
-  timestampSpan.classList.add("timestamp");
-  timestampSpan.textContent = formatTimestamp(createdAt);
-  messageDivContainer.append(timestampSpan);
 
   const messageDiv = document.createElement("div");
   messageDiv.classList.add("message");
   messageDiv.innerHTML = "<div>" + text + "</div>";
-  messageDivContainer.append(messageDiv);
+
+  const timestampSpan = document.createElement("p");
+  timestampSpan.classList.add("timestamp");
+  timestampSpan.textContent = formatTimestamp(createdAt);
+  messageDiv.appendChild(timestampSpan);
+
+  messageDivContainer.appendChild(messageDiv);
+
   return messageDivContainer;
 };
 

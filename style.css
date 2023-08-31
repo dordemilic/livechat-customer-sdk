@@ -229,7 +229,7 @@ button:hover {
   background-color: #f6f7f8;
   resize: none;
   height: 40px;
-  padding: 10px
+  padding: 10px;
 }
 
 #typing-indicator {
@@ -241,14 +241,24 @@ button:hover {
   color: #b2bbc6;
 }
 
+.timestamp {
+  margin: 0;
+  font-size: 11px;
+}
+
 .message-container {
   margin-bottom: 0.5em;
   margin-right: auto;
   margin-left: auto;
+  position: relative;
   max-width: 90%;
   display: flex;
   align-items: flex-start;
   flex-shrink: 0;
+}
+
+.avatar-container {
+  display: flex;
 }
 
 .message {
@@ -258,6 +268,10 @@ button:hover {
   color: #7a7a7a;
   box-shadow: rgba(0, 0, 0, 0.03) 0px 2px 4px;
   word-wrap: break-word;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  align-items: flex-start;
   max-width: 100%;
   font-family: Arial;
   font-size: 14px;
