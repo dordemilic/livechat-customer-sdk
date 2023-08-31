@@ -34,7 +34,8 @@ export const createMessage = (id, text, authorType, avatar, createdAt) => {
 const formatTimestamp = (timestamp) => {
   const date = new Date(timestamp);
   const hours = date.getHours();
-  const minutes = date.getMinutes();
+  const minutes = date.getMinutes().toString().padStart(2, "0"); 
+
   return `${hours}:${minutes}`;
 };
 
