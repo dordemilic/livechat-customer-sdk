@@ -7,14 +7,60 @@
     <title>Vite App</title>
   </head>
   <body>
-    <div class="chat-wrapper">
-      <div class="chat-container" id="chat-container">
-        <!-- Chat messages will be displayed here -->
+    <div id="minimized">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="19"
+        height="11"
+        viewBox="0 0 19 11"
+        fill="#fff"
+      >
+        <path
+          d="M0.401098 0.401098C0.657998 0.144275 1.00638 0 1.36964 0C1.7329 0 2.08128 0.144275 2.33818 0.401098L9.11935 7.18227L15.9005 0.401098C16.1589 0.151554 16.5049 0.0134715 16.8641 0.0165928C17.2233 0.0197141 17.5669 0.163789 17.8209 0.417786C18.0749 0.671783 18.219 1.01538 18.2221 1.37457C18.2252 1.73376 18.0872 2.07981 17.8376 2.33818L10.0879 10.0879C9.831 10.3447 9.48261 10.489 9.11935 10.489C8.7561 10.489 8.40771 10.3447 8.15081 10.0879L0.401098 2.33818C0.144275 2.08128 0 1.7329 0 1.36964C0 1.00638 0.144275 0.657999 0.401098 0.401098Z"
+          fill="white"
+        />
+      </svg>
+    </div>
+    <div id="chat-container">
+      <div id="chat-container__header">
+        <div class="chat-container__title">Live Chat</div>
+        <div class="chat-container__description">We typically reply in under 15 seconds</div>
+        <button id="chat-container__minimize">
+          <svg
+            fill="#5a6976"
+            height="24"
+            viewbox="0 0 24 24"
+            width="24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path
+              d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+            />
+            <path d="M0 0h24v24H0z" fill="none" />
+          </svg>
+        </button>
+      </div>
+      <div id="chat-container__chat">
+        <div id="chat-container__loader"></div>
       </div>
       <div id="typing-indicator" style="display: none;"></div>
-      <div class="message-input">
-        <input type="text" id="message-input" placeholder="Type your message..." />
-        <button id="send-btn">Send</button>
+      <div id="chat-container__footer" style="display: none">
+        <div id="chat-container__textarea-wrapper" style="display: none">
+          <textarea placeholder="Write a message..." id="message-input" disabled></textarea>
+          <button id="send-button" disabled>
+            <svg
+              fill="#000"
+              height="24"
+              viewbox="0 0 24 24"
+              width="24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z" />
+              <path d="M0 0h24v24H0z" fill="none" />
+            </svg>
+          </button>
+        </div>
+        <button id="start-chat-button" style="display: none">Start new chat</button>
       </div>
     </div>
     <script type="module" src="/main.js"></script>

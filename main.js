@@ -1,189 +1,300 @@
 import "./style.css";
-import * as CustomerSDK from "@livechat/customer-sdk";
+import "./polyfill";
+import { init, debug } from "@livechat/customer-sdk";
+import * as DOMElements from "./DOMElements";
+import * as DOMOperations from "./DOMOperations";
 
-const chatContainer = document.getElementById("chat-container");
-const messageInput = document.getElementById("message-input");
-const sendButton = document.getElementById("send-btn");
+export const typingIndicatorElement = document.getElementById('typing-indicator');
 
-sendButton.addEventListener("click", () => {
-  const messageText = messageInput.value;
-  if (messageText) {
-    sendCustomerMessage(messageText);
-    messageInput.value = ""; 
-  }
-});
+const loader = document.getElementById("chat-container__loader");
+loader.innerHTML = DOMElements.logoLoader;
 
-const LICENSE_ID = 15965568;
-const CLIENT_ID = "811343011b59d46e08cb64ceef8a4d66";
-
-const customerSDK = CustomerSDK.init({
-  licenseId: LICENSE_ID,
-  clientId: CLIENT_ID,
-});
-
-const chatMessages = [];
-
-const initialState = {
-  customer: {
-    id: "",
-    type: "",
-  },
-  agent: {
-    id: "",
-    type: "",
-  },
+const historyStates = {
+  DONE: "DONE",
+  INACTIVE: "INACTIVE",
+  LOADING: "LOADING",
 };
 
-function useState(initialValue) {
-  let value = initialValue;
+const noop = () => {};
 
-  function getValue() {
-    return value;
-  }
+const sdk = debug(init({ licenseId: 15965568, clientId: "811343011b59d46e08cb64ceef8a4d66" }));
+window.sdk = sdk;
 
-  function setValue(newValue) {
-    value = newValue;
-  }
+const state = {
+  chat: null,
+  active: false,
+  activating: false,
+  users: {},
+  pendingMessages: [],
+  customerId: null,
+  historyStatus: historyStates.INACTIVE,
+  history: null,
+  isTyping: false
+};
 
-  return [getValue, setValue];
-}
+const isAgent = (user) => user.id !== state.customerId;
 
-const [getCustomerData, setCustomerData] = useState(initialState.customer);
-const [getAgentData, setAgentData] = useState(initialState.agent);
+console.log(state.users)
 
-function getAndDisplayChat(chatId) {
-  customerSDK
-    .getChat({
-      chatId: chatId,
-    })
-    .then((chat) => {
-      const { id, access, users, properties, thread } = chat;
-      const messages = thread.events.filter((event) => event.authorId !== "system");
+sdk.on("connected", () => {
+  sdk.listChats().then(({ chatsSummary, totalChats }) => {
+    if (state.chat) {
+      return;
+    }
 
-      displayChatMessages(messages);
-    })
-    .catch((error) => {
-      console.log(error);
+    DOMOperations.enableInput();
+    DOMOperations.enableSendButton();
+
+    if (totalChats === 0) {
+      loader.parentElement.removeChild(loader);
+      DOMOperations.showFooter();
+      DOMOperations.showStartChatButton();
+      return;
+    }
+
+    state.chat = chatsSummary[0].id;
+    state.active = chatsSummary[0].active;
+
+    loadInitialHistory().then(() => {
+      loader.parentElement.removeChild(loader);
+      DOMOperations.showFooter();
+      if (!state.active) {
+        DOMOperations.hideChat();
+      } else {
+        DOMOperations.showChat();
+      }
     });
-}
+  });
+});
+sdk.on("connection_restored", noop);
+sdk.on("user_is_typing", noop);
+sdk.on("user_stopped_typing", noop);
+sdk.on("user_joined_chat", noop);
+sdk.on("user_left_chat", noop);
 
-// Connected event
-customerSDK.on("connected", (payload) => {
-  console.log("Connected to LiveChat");
-
-  customerSDK
-    .getCustomer()
-    .then((customer) => {
-      setCustomerData(customer);
-
-      customerSDK
-        .getPredictedAgent({ groupId: 0 })
-        .then((agentData) => {
-          setAgentData(agentData.agent);
-
-          console.log("Customer:", getCustomerData());
-          console.log("Agent:", getAgentData());
-
-          getAndDisplayChat("S007C3QD7Y");
-
-          customerSDK.on("incoming_event", (payload) => {
-            const { event } = payload;
-            console.log(event.text)
-
-            if (event.threadId === "S007C3QD7Y" && event.type === "message") {
-              displayChatMessages([event.text]);
-            }
-          });
-        })
-        .catch((error) => {
-          console.log("Error fetching agent data:", error);
-        });
-    })
-    .catch((error) => {
-      console.log("Error fetching customer data:", error);
-    });
-
-  messageInput.style.display = "block";
-  sendButton.style.display = "block";
+sdk.on("customer_id", (id) => {
+  state.customerId = id;
 });
 
-customerSDK.on('incoming_typing_indicator', (payload) => {
-  const typingIndicatorElement = document.getElementById('typing-indicator');
+const onConnectionLost = () => {
+  DOMOperations.disableInput("Disconnected");
+  DOMOperations.disableSendButton();
+};
+
+sdk.on('incoming_typing_indicator', (payload) => {
   if (payload.typingIndicator.isTyping) {
+    state.isTyping = true;
     const authorId = payload.typingIndicator.authorId;
-    const authorName = authorId === getAgentData().id ? getAgentData().name : 'Agent';
-    typingIndicatorElement.textContent = `${authorName} is typing...`;
-    typingIndicatorElement.style.display = 'block';
+    const author = state.users[authorId];
+        
+    if (author && author.type === 'agent' && author.name) {
+      const authorName = author.name;
+      typingIndicatorElement.textContent = `${authorName} is typing...`;
+      typingIndicatorElement.style.display = 'block';
+    } else {
+      typingIndicatorElement.style.display = 'none';
+    }
   } else {
+    state.isTyping = false;
     typingIndicatorElement.style.display = 'none';
   }
 });
 
-function displayChatMessages(messages) {
-  chatContainer.innerHTML = "";
-
-  messages.forEach((message) => {
-    const messageElement = document.createElement("div");
-    messageElement.className = "message";
-
-    const timestamp = new Date(message.createdAt);
-    const formattedTimestamp = formatTimestamp(timestamp);
-
-    if (message.authorId === getCustomerData().id) {
-      messageElement.innerHTML = `
-        <p class="sender sender-customer">Customer:</p>
-        <p class="text">${message.text}</p>
-        <p class="timestamp">${formattedTimestamp}</p>
-      `;
-    } else if (message.authorId === getAgentData().id) {
-      messageElement.innerHTML = `
-        <p class="sender sender-agent">${getAgentData().name}</p>
-        <p class="text">${message.text}</p>
-        <p class="timestamp">${formattedTimestamp}</p>
-      `;
-    } else {
-      messageElement.innerHTML = `
-        <p class="text">${message.text}</p>
-        <p class="timestamp">${formattedTimestamp}</p>
-      `;
-    }
-
-    chatContainer.appendChild(messageElement);
-  });
-
-  chatContainer.scrollTop = chatContainer.scrollHeight;
-}
-
-function formatTimestamp(date) {
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  return `${hours < 10 ? '0' : ''}${hours}:${minutes < 10 ? '0' : ''}${minutes}`;
-}
-
-function sendCustomerMessage(text) {
-  const event = {
-    type: "message",
-    text: text,
-    author: initialState.customer.id,
-    id: `OU0V0U3IMN_${chatMessages.length + 1}`,
-    timestamp: Date.now(),
-    thread: "OU0V0U3IMN",
-    properties: {},
-  };
-
-  customerSDK
-    .sendEvent({
-      chatId: "S007C3QD7Y",
-      event: event,
-    })
-    .then(() => {
-      console.log("Customer Message sent:", event);
-    })
-    .catch((error) => {
-      console.log("Error sending customer message:", error);
-    });
-}
-
-customerSDK.auth.getToken().then((token) => {
-  console.log(token);
+sdk.on("connection_lost", () => {
+  onConnectionLost();
 });
+
+sdk.on("diconnected", (reason) => {
+  onConnectionLost();
+});
+
+sdk.on("user_data", (user) => {
+  state.users[user.id] = user;
+  console.log(user)
+});
+
+sdk.on("incoming_chat", ({ chat }) => handleChatStart(chat));
+
+sdk.on("incoming_event", ({ event }) => {
+  if (!state.chat || event.type !== "message") {
+    return;
+  }
+  const author = state.users[event.authorId];
+  DOMOperations.appendMessage(
+    DOMOperations.createMessage(
+      event.id,
+      event.text,
+      isAgent(author) ? "agent" : "customer",
+      author.avatar,
+      event.createdAt
+    )
+  );
+});
+
+sdk.on("chat_deactivated", () => {
+  state.active = false;
+  DOMOperations.hideChat();
+});
+
+const handleChatStart = (chat) => {
+  state.chat = chat.id;
+  state.historyStatus = historyStates.DONE;
+  state.active = true;
+  state.activating = false;
+  state.pendingMessages = [];
+  const messages = getMessagesFromThreads([chat.thread]);
+  messages.forEach((message) => DOMOperations.appendMessage(message));
+  DOMOperations.scrollToBottom();
+  DOMOperations.showChat();
+};
+
+const sendMessage = (chat, id, text) => {
+  const message = { customId: id, text, type: "message" };
+
+  sdk.sendEvent({ chatId: chat, event: message }).then(
+    (confirmedMessage) => {
+      DOMOperations.confirmMessageAsSent(id);
+    },
+    () => {
+      DOMOperations.markAsFailedMessage(id);
+    }
+  );
+};
+
+const startChat = () => {
+  state.activating = true;
+  const payload = {
+    chat: {
+      ...(state.chat && { id: state.chat }),
+      thread: {
+        events: state.pendingMessages.map((event) => {
+          return {
+            type: "message",
+            text: event.message,
+            customId: event.id,
+          };
+        }),
+      },
+    },
+  };
+  const action = state.chat ? sdk.activateChat : sdk.startChat;
+  action(payload)
+    .then(({ chat }) => {
+      handleChatStart(chat);
+    })
+    .catch(() => {
+      state.activating = false;
+      state.pendingMessages.forEach(({ messageId: id }) => DOMOperations.markAsFailedMessage(id));
+      state.pendingMessages = [];
+    });
+};
+
+const handleMessage = () => {
+  const text = DOMElements.input.value;
+  DOMElements.input.value = "";
+
+  if (!text) {
+    return;
+  }
+
+  const messageId = `${Math.random() * 1000}`;
+  const currentTime = Date.now();
+
+  if (state.active) {
+    sendMessage(state.chat, messageId, text);
+  } else {
+    if (!state.activating) {
+      startChat();
+    }
+    state.pendingMessages.push({ messageId, text, createdAt:currentTime });
+  }
+
+  DOMOperations.appendMessage(DOMOperations.createMessage(messageId, text, "customer", null, currentTime));
+  DOMOperations.scrollToBottom();
+};
+
+DOMElements.startChatButton.onclick = startChat;
+DOMElements.sendButton.onclick = handleMessage;
+DOMElements.minimizeButton.onclick = DOMOperations.toggleMinimized;
+DOMElements.lcWindowMinimized.onclick = DOMOperations.toggleMinimized;
+DOMElements.input.onkeydown = (event) => {
+  if (event.which !== 13) {
+    return;
+  }
+  event.preventDefault();
+  handleMessage();
+};
+
+const loadHistory = (chat) => {
+  return new Promise((resolve, reject) => {
+    state.historyStatus = historyStates.LOADING;
+    state.history.next().then(
+      ({ value: { threads }, done }) => {
+        if (!threads) {
+          return;
+        }
+
+        const messages = getMessagesFromThreads(threads);
+        const messageList = DOMOperations.getMessageList(chat);
+
+        const fromTheBottom =
+          messageList.scrollHeight - (messageList.scrollTop + messageList.clientHeight);
+
+        DOMOperations.prependMessages(chat, messages);
+
+        messageList.scrollTop = messageList.scrollHeight - messageList.clientHeight - fromTheBottom;
+
+        state.historyStatus = done ? historyStates.DONE : historyStates.INACTIVE;
+        resolve();
+      },
+      (err) => {
+        state.historyStatus = historyStates.INACTIVE;
+        reject(err);
+      }
+    );
+  });
+};
+
+const getMessagesFromThreads = (threads) =>
+  threads
+    .map(({ events }) => events || [])
+    .reduce((acc, current) => [...acc, ...current], [])
+    .filter((event) => event.type === "message")
+    .map((event) => {
+      const author = state.users[event.authorId];
+      return DOMOperations.createMessage(
+        event.id,
+        event.text,
+        isAgent(author) ? "agent" : "customer",
+        author.avatar,
+        event.createdAt 
+      );
+    });
+
+const loadInitialHistory = () => {
+  const chatId = state.chat;
+
+  state.history = sdk.getChatHistory({ chatId });
+
+  const loadLatestHistory = () => loadHistory(chatId).then(() => DOMOperations.scrollToBottom());
+
+  return loadLatestHistory()
+    .catch(() => loadLatestHistory())
+    .catch(noop);
+};
+
+DOMOperations.delegate(
+  "#chat-container",
+  ".chat-container__chat",
+  "mousewheel",
+  DOMOperations.throttle(300, function loadMore() {
+    const chatId = this.dataset.id;
+    const chat = state.chats[chatId];
+
+    if (this.scrollTop < 50 && chat.historyStatus === historyStates.INACTIVE) {
+      loadHistory(chatId).catch(noop);
+    }
+  })
+);
+
+window.addEventListener("beforeunload", sdk.disconnect);
